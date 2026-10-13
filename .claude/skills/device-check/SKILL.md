@@ -22,7 +22,7 @@ cache. The runner pulls that render back to the Mac, where it can be measured.
 
 ```bash
 S=.claude/skills/device-check/scripts
-$S/run.sh ios '{"sample":"portrait","commands":["make my face brighter"]}' --name face   # or android | both
+$S/run.sh ios '{"sample":"portrait","commands":["make my face brighter"]}' --name face   # or android | both; --timeout SEC (180)
 node $S/measure.mjs assets/samples/portrait.jpg "$DEVCHECK_DIR/face-ios.jpg" --preset portrait
 $S/run.sh stop   # when done: stops the Metro and script server the runner started
 ```
@@ -46,7 +46,7 @@ ground box). For your own boxes, add `--box name=x0,y0,x1,y1` in frame fractions
 | Command | iOS simulator | Android emulator |
 |---|---|---|
 | "make my face brighter" | face +17.0, background +0.6 | face +16.9, background +0.6 |
-| "blur the background a lot" | background detail 2.27 → 0.13, face ±0.1 | (not recorded) |
+| "blur the background a lot" | background detail 2.27 → 0.13, face ±0.1 | background detail 2.27 → 0.14, face ±0.1 |
 
 **Treat as a regression to explain:**
 - the face number moving more than about 1 level for the same command;
