@@ -1,0 +1,22 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.ondevicellm'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.ondevicellm"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // Gemini Nano through ML Kit GenAI (AICore). Pinned to beta2: beta3+ are built
+  // with Kotlin 2.3 metadata and pull kotlin-stdlib 2.3.x, which the app's
+  // Kotlin 2.1 compiler cannot read.
+  implementation 'com.google.mlkit:genai-prompt:1.0.0-beta2'
+}

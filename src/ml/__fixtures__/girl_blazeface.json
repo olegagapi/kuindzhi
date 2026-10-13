@@ -1,0 +1,6 @@
+{
+  "source": "girl.jpg (CC0, 'The Girl' from Unsplash via Wikimedia Commons), 1920x1285, letterboxed to 128",
+  "image": [1920, 1285],
+  "rect": { "size": 128, "x": 0, "y": 21, "width": 128, "height": 86 },
+  "expected": { "centerPx": [557, 648], "sizePx": 495 }
+}

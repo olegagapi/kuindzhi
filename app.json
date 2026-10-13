@@ -1,17 +1,24 @@
 {
   "expo": {
-    "name": "kandinsky",
-    "slug": "kandinsky",
-    "version": "1.0.0",
+    "name": "Kuindzhi",
+    "slug": "kuindzhi",
+    "scheme": "kuindzhi",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0E0D0B",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "app.kuindzhi",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "app.kuindzhi",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0E0D0B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +27,43 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "react-native-fast-tflite",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Kuindzhi listens when you hold the mic so you can describe edits by voice.",
+          "speechRecognitionPermission": "Kuindzhi turns your spoken edit into text, on this device when possible.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.as"
+          ]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Kuindzhi opens the photo you want to edit."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Kuindzhi saves edited photos to your library.",
+          "savePhotosPermission": "Kuindzhi saves edited photos to your library.",
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ],
+      "expo-sharing",
+      "expo-asset",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
