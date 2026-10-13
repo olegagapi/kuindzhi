@@ -27,6 +27,10 @@ cd server && npm run setup -- --dry-run                       # one-command depl
 - Android dev-script runs: `adb reverse tcp:8081 tcp:8081 && adb reverse tcp:8099 tcp:8099`, then
   `adb shell am start -a android.intent.action.VIEW -d "kuindzhi://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"`
   (no confirmation prompt on Android); captures land in `run-as app.kuindzhi cat cache/<name>.jpg`.
+- Project skills (`.claude/skills/`): `device-check` runs scripted commands on the simulator/emulator, pulls the
+  full-res render and measures it against baselines; `engine-change` covers catalog/shader changes, with a curve probe
+  that renders any adjustment through the real shader. The Expo plugin (enabled in `.claude/settings.json`) covers
+  dev-client/store builds, EAS Update, native modules and SDK upgrades.
 - Verifying UI changes without tapping: the dev-script hook (`src/dev/devScript.ts`, README "Scripted runs") opens the
   editor, runs commands, and can `capture` the full-res render to the app cache for pixel inspection, `save` it to Photos, or `resume` the latest saved session. Launch with
   `xcrun simctl launch booted app.kuindzhi --initialUrl http://localhost:8081` (`simctl openurl` triggers a

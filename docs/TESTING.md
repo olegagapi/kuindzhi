@@ -16,7 +16,7 @@ Run everything with `npm test` in the app and `cd server && npm test` for the wo
 | Suite | What it checks |
 |---|---|
 | `src/engine/__tests__/shaders.test.ts` | Every SkSL source compiles. Uniform slots are packed in float units. |
-| `src/engine/__tests__/render.test.ts` | **Rendering:**<ul><li>no steps gives the exact original; disabled and zero steps are ignored;</li><li>exposure brightens and darkens and rolls highlights off instead of clipping;</li><li>temperature warms and cools; monochrome removes colour; contrast widens and narrows the spread of tones.</li></ul>**Masks:**<ul><li>a geometric region changes only its side of the frame, and invert flips that;</li><li>regions the photo lacks are skipped; semantic regions follow the segmentation planes;</li><li>every region builds a mask; the selection overlay renders.</li></ul>**Analysis:** auto-enhance brightens a dark photo, and adds a face-only exposure step when the face is darker than the background. |
+| `src/engine/__tests__/render.test.ts` | **Rendering:**<ul><li>no steps gives the exact original; disabled and zero steps are ignored; every adjustment at full strength gives finite, changed pixels;</li><li>exposure brightens and darkens and rolls highlights off instead of clipping;</li><li>temperature warms and cools; monochrome removes colour; contrast widens and narrows the spread of tones.</li></ul>**Masks:**<ul><li>a geometric region changes only its side of the frame, and invert flips that;</li><li>regions the photo lacks are skipped; semantic regions follow the segmentation planes;</li><li>every region builds a mask; the selection overlay renders.</li></ul>**Analysis:** auto-enhance brightens a dark photo, and adds a face-only exposure step when the face is darker than the background. |
 | `src/ml/__tests__/ml.test.ts` | Letterbox geometry and the [−1, 1] input scaling. BlazeFace decoding against a **real model output** (`src/ml/__fixtures__`): 896 anchors, one face after NMS, the box matches the reference decoder, eyes sit above the mouth. NMS and IoU. Segmentation softmax and letterbox crop. |
 | `src/nlp/__tests__/localParser.test.ts` | Table-driven, sentence → expected steps:<ul><li>single adjustments, tones, region-specific actions, intensity words, "too / less / not enough", inversion;</li><li>compound commands, looks, history and auto;</li><li>generative requests are refused, and nonsense isn't understood;</li><li>available regions, replies, lexicon integrity, unknown words.</li></ul> |
 | `src/nlp/__tests__/planner.test.ts` | The cascade policy:<ul><li>local first; the free on-device tier for leftover words, never the paid one;</li><li>cloud for the rest;</li><li>empty plans and missing regions are rejected;</li><li>the fallback reply, and keeping the understood part of a partial command.</li></ul> |
@@ -28,6 +28,11 @@ Run everything with `npm test` in the app and `cd server && npm test` for the wo
 
 This covers directions ("warmer is warmer") and locality ("the edit stays inside the mask"). It doesn't yet cover
 exact maths or every adjustment. That's the next section.
+
+**Tools for the next steps:**
+- `.claude/skills/engine-change/scripts/curve.sh <adjustment> [amounts]` prints any adjustment's response curve,
+  run through the real shader: grey in → out, whether tone order holds, colour cast, and the change per hue.
+- The `device-check` skill (next sections) runs the same commands on the simulator and emulator.
 
 ## Planned: a functional suite for every algorithm (not built yet)
 
@@ -75,7 +80,8 @@ about masked-out pixels, which the shader returns untouched.
 ## On real devices
 
 The dev-script hook (`src/dev/devScript.ts`; README, "Scripted runs") opens the editor, runs commands, and writes the
-full-resolution render to the app cache. You can pull that JPEG off the iOS simulator or Android emulator and measure
+full-resolution render to the app cache. The `device-check` skill (`.claude/skills/device-check/`) automates the
+whole loop and measures regions against recorded baselines. You can pull that JPEG off the iOS simulator or Android emulator and measure
 it. That's how the cross-platform check was done: "make my face brighter" raised the face by 16.8 levels on iOS and
 16.6 on Android. The same mechanism verified autosave and resume (bit-identical re-render) and the selection
 overlay. It can run in CI on both platforms if that's ever needed.
