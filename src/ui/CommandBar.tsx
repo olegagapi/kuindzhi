@@ -8,6 +8,8 @@ interface Props {
   busy: boolean;
   listening: boolean;
   transcript: string;
+  /** False when this build has no speech recognizer; the mic then explains why. */
+  micAvailable?: boolean;
   suggestions: string[];
   onSubmit: (text: string) => void;
   onMicStart: () => void;
@@ -15,7 +17,16 @@ interface Props {
 }
 
 /** Type or hold-to-talk. */
-export function CommandBar({ busy, listening, transcript, suggestions, onSubmit, onMicStart, onMicStop }: Props) {
+export function CommandBar({
+  busy,
+  listening,
+  transcript,
+  micAvailable = true,
+  suggestions,
+  onSubmit,
+  onMicStart,
+  onMicStop,
+}: Props) {
   const [text, setText] = useState('');
 
   const submit = (value: string) => {
@@ -74,7 +85,7 @@ export function CommandBar({ busy, listening, transcript, suggestions, onSubmit,
           onPressIn={onMicStart}
           onPressOut={onMicStop}
           disabled={busy}
-          style={[styles.mic, listening && styles.micActive]}
+          style={[styles.mic, listening && styles.micActive, !micAvailable && styles.micOff]}
           accessibilityRole="button"
           accessibilityLabel="Hold to speak an edit"
         >
@@ -122,4 +133,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHigh,
   },
   micActive: { backgroundColor: colors.accent, transform: [{ scale: 1.08 }] },
+  micOff: { opacity: 0.4 },
 });

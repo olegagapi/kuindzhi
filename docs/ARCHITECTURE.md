@@ -83,6 +83,31 @@ so "a bit" / "a lot" mean the same thing to every planner.
   background, hair, body-skin, face-skin, clothes, others; letterboxing (aspect-preserving) segments full-body and
   back-lit people far better than stretching. The BlazeFace decoder is unit-tested against a real model output.
 
+## Offline and failure behaviour
+
+Everything that touches pixels runs on the phone, so the app is useful with no connection at all.
+
+| Part | Needs a connection? | If it is missing or fails |
+|---|---|---|
+| Opening, analysing, editing, exporting, Save to Photos | No | Each vision model is independent: if the person segmenter or face detector fails to load, only its regions disappear ("Basic regions only"); every other region still works |
+| Local parser | No | — |
+| On-device LLM (Apple Foundation Models, Gemini Nano) | No (Gemini Nano downloads its model once) | Skipped for the session after two failures in a row |
+| Cloud planner | Yes | Offline or timeout: skipped for a minute. Quota hit: five minutes. Rejected key or broken setup: off for the session. The reply says which ("Offline, so this was handled on the phone") |
+| Voice | Only on phones without on-device speech for the language | A plain message suggests typing instead |
+| A native module missing from the build (speech, TFLite) | — | Loaded lazily: that feature turns off and the editor still opens |
+
+The circuit breakers live in `src/nlp/resilience.ts`; the tiers are created once per launch (`src/nlp/tiers.ts`) so a
+broken tier stays skipped when you open the next photo.
+
+## Saving progress
+
+Edits are saved automatically. The first edit on a photo creates a session in the app's documents folder
+(`Documents/sessions/<id>/`: its own copy of the original, a thumbnail, and `session.json` with the steps and undo
+history), and every change after that is written about half a second later, and immediately when the app goes to the
+background or the editor closes. The home screen lists the 12 most recent sessions under "Continue editing"; long-press
+one to delete it. Session files are validated on load, so a step that a newer version no longer understands is dropped
+instead of losing the whole session. Finished photos leave the app through Save to Photos or Share, at full resolution.
+
 ## AI cost plan
 
 | Tier | Handles | Cost | Latency | Privacy |
@@ -132,6 +157,10 @@ Built and verified:
 - Apple Foundation Models: the module builds, reports availability and issues the guided-generation request; on this
   development Mac the simulator reports "available" but the host lacks the model assets
   (`instruct_300m … not found in Model Catalog`), so generation fails and the cascade falls back as designed.
+
+- Graceful failure in the simulator: a planner that rejects its key is tried once and then switched off for the
+  session; an unreachable planner is skipped for a minute; both replies explain what happened.
+- Saved sessions: edits made, app killed, session resumed: the re-rendered photo is bit-identical to the one before.
 
 Not yet verified:
 - Foundation Models / Gemini Nano generation quality on real hardware (needs an Apple Intelligence iPhone or a

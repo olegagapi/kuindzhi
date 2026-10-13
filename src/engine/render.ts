@@ -3,6 +3,7 @@
 import type { SkImage, SkShader } from '@shopify/react-native-skia';
 
 import { ADJUSTMENTS, ADJUSTMENT_INFO, type Adjustment, type Region } from '../edits/catalog';
+import { hexToRgb01, palette } from '../ui/palette';
 import { blurImage, disposeAll, resample, shaderPass, solidShader, stretchShader } from './gpu';
 import type { MaskStore } from './masks';
 import { ADJUST_SKSL, MASK_MULTIPLY_SKSL, OVERLAY_SKSL } from './shaders';
@@ -100,9 +101,17 @@ export function renderPhoto(
   return current;
 }
 
-/** Translucent amber overlay showing a region's selection. */
-export function renderSelectionOverlay(mask: SkImage | null, width: number, height: number, cpu = false): SkImage {
-  return shaderPass(OVERLAY_SKSL, {}, [mask ? stretchShader(mask, width, height) : solidShader(1)], width, height, cpu);
+const SELECTION_TINT = hexToRgb01(palette.accent);
+
+/** Translucent overlay in the palette accent showing a region's selection. */
+export function renderSelectionOverlay(
+  mask: SkImage | null,
+  width: number,
+  height: number,
+  cpu = false,
+  tint: readonly number[] = SELECTION_TINT,
+): SkImage {
+  return shaderPass(OVERLAY_SKSL, { tint }, [mask ? stretchShader(mask, width, height) : solidShader(1)], width, height, cpu);
 }
 
 /** Fit an image's aspect ratio inside a long-edge budget. */

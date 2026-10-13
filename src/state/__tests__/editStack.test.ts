@@ -51,6 +51,16 @@ describe('editStackReducer', () => {
     expect(editStackReducer(s, { type: 'undo' }).steps).toHaveLength(1);
   });
 
+  it('restores a saved stack with its history', () => {
+    const saved = apply(apply(initialEditStack));
+    const restored = editStackReducer(initialEditStack, {
+      type: 'restore',
+      stack: { steps: saved.steps, past: saved.past, future: [] },
+    });
+    expect(restored.steps).toEqual(saved.steps);
+    expect(editStackReducer(restored, { type: 'undo' }).steps).toHaveLength(1);
+  });
+
   it('removes a step and clears its selection', () => {
     const s = apply(initialEditStack);
     const removed = editStackReducer(s, { type: 'remove', id: s.steps[0].id });

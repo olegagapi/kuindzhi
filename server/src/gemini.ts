@@ -74,6 +74,11 @@ export async function planWithGemini(client: GeminiClient, model: string, { comm
 function toUpstreamError(err: unknown): UpstreamError {
   if (err instanceof ApiError) {
     if (err.status === 429) return new UpstreamError(429, 'upstream_rate_limited');
+    // Gemini answers an invalid key with 400 "API key not valid" (per its error docs; not
+    // verified against a live key here), and a revoked or restricted one with 401/403.
+    if (err.status === 401 || err.status === 403 || (err.status === 400 && /api[ _-]?key/i.test(err.message))) {
+      return new UpstreamError(502, 'upstream_auth');
+    }
     if (err.status === 408 || err.status === 504) return new UpstreamError(504, 'upstream_timeout');
     console.error('Gemini API error', err.status, err.message);
     return new UpstreamError(502, 'upstream_error');

@@ -8,11 +8,17 @@ import * as Sharing from 'expo-sharing';
 /** Largest edge we keep in memory and export (12–16 MP phones fit; 48 MP gets downscaled). */
 export const MAX_EDGE = 4096;
 
+export interface LoadedPhoto {
+  image: SkImage;
+  /** The normalized JPEG on disk (orientation applied, ≤ MAX_EDGE). */
+  fileUri: string;
+}
+
 /**
  * Decode a picked photo. ImageManipulator re-encodes it, which applies the EXIF
  * orientation (Skia's decoder doesn't) and caps the resolution.
  */
-export async function loadPhoto(uri: string): Promise<SkImage> {
+export async function loadPhoto(uri: string): Promise<LoadedPhoto> {
   let ref = await ImageManipulator.manipulate(uri).renderAsync();
   const longEdge = Math.max(ref.width, ref.height);
   if (longEdge > MAX_EDGE) {
@@ -22,10 +28,21 @@ export async function loadPhoto(uri: string): Promise<SkImage> {
       .renderAsync();
   }
   const saved = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.97 });
-  const data = await Skia.Data.fromURI(saved.uri);
+  return { image: await decodeFile(saved.uri), fileUri: saved.uri };
+}
+
+/** Decode a JPEG that is already normalized (e.g. a saved session's original). */
+export async function decodeFile(uri: string): Promise<SkImage> {
+  const data = await Skia.Data.fromURI(uri);
   const image = Skia.Image.MakeImageFromEncoded(data);
   if (!image) throw new Error('Could not decode this photo');
   return image;
+}
+
+/** Small JPEG for the "Continue editing" list. */
+export async function makeThumbnail(uri: string): Promise<string> {
+  const ref = await ImageManipulator.manipulate(uri).resize({ width: 320 }).renderAsync();
+  return (await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 })).uri;
 }
 
 function writeJpeg(image: SkImage): string {

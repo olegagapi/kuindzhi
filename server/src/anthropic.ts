@@ -4,6 +4,8 @@ import Anthropic, {
   APIConnectionError,
   APIConnectionTimeoutError,
   APIError,
+  AuthenticationError,
+  PermissionDeniedError,
   RateLimitError,
 } from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
@@ -55,6 +57,10 @@ export async function planWithClaude(client: ClaudeClient, model: string, { comm
 function toUpstreamError(err: unknown): UpstreamError {
   // Most specific first: in the TS SDK the connection errors subclass APIError.
   if (err instanceof RateLimitError) return new UpstreamError(429, 'upstream_rate_limited');
+  // A rejected key won't fix itself: the app turns the cloud tier off for the session.
+  if (err instanceof AuthenticationError || err instanceof PermissionDeniedError) {
+    return new UpstreamError(502, 'upstream_auth');
+  }
   if (err instanceof APIConnectionTimeoutError) return new UpstreamError(504, 'upstream_timeout');
   if (err instanceof APIConnectionError) return new UpstreamError(502, 'upstream_unreachable');
   if (err instanceof APIError) {

@@ -5,7 +5,8 @@
 "Make my face lighter" becomes: find the face (on-device segmentation) → build a feathered mask → apply
 exposure in linear light with a soft highlight shoulder, only inside that mask. Every command becomes editable
 steps (slider, on/off, invert, show area), every pixel stays a function of your original, and the photo never
-leaves the phone.
+leaves the phone. Edits are saved automatically ("Continue editing" on the home screen), and everything except the
+optional cloud planner works offline.
 
 iOS + Android, React Native + Expo (SDK 57), Skia for the GPU pipeline, TFLite for on-device vision.
 Design rationale, AI cost plan and roadmap: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

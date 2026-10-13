@@ -296,11 +296,12 @@ half4 main(float2 xy) {
 }
 `;
 
-/** Amber selection overlay used to show "what Kuindzhi selected". */
+/** Translucent selection overlay ("what Kuindzhi selected"), tinted with the palette accent. */
 export const OVERLAY_SKSL = `
 uniform shader mask;
+uniform float3 tint;
 half4 main(float2 xy) {
   half v = mask.eval(xy).r * 0.55;
-  return half4(half3(1.0, 0.68, 0.18) * v, v);
+  return half4(half3(tint) * v, v);
 }
 `;

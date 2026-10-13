@@ -133,6 +133,8 @@ describe('planner worker (PROVIDER=gemini, the default)', () => {
     timeout.name = 'AbortError';
     const cases: Array<[unknown, number, string]> = [
       [new ApiError({ message: 'quota', status: 429 }), 429, 'upstream_rate_limited'],
+      [new ApiError({ message: 'API key not valid. Please pass a valid API key.', status: 400 }), 502, 'upstream_auth'],
+      [new ApiError({ message: 'permission denied', status: 403 }), 502, 'upstream_auth'],
       [new ApiError({ message: 'boom', status: 500 }), 502, 'upstream_error'],
       [timeout, 504, 'upstream_timeout'],
       [new TypeError('fetch failed'), 502, 'upstream_unreachable'],

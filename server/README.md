@@ -33,6 +33,7 @@ relative path (`../src/edits/*`), so the worker and app can't drift apart.
 | 502 | `model_output_invalid` | the model's output was truncated or failed schema validation |
 | 502 | `upstream_error` / `upstream_unreachable` | model API error or network failure |
 | 504 | `upstream_timeout` | model API timed out |
+| 502 | `upstream_auth` | the model provider rejected the API key (invalid, revoked or restricted) |
 | 500 | `not_configured` / `unknown_provider` | the provider's key secret is missing, or `PROVIDER` is not `gemini`/`anthropic` |
 
 The app treats every non-200 as "this tier failed" and falls back to what the

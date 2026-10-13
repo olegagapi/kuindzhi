@@ -1,24 +1,59 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { fetchDevScript } from '../dev/devScript';
+import type { SessionMeta } from '../state/sessionStore';
+import { sessions } from '../state/sessions';
+import { timeAgo } from '../ui/format';
 import { colors, radius, serif } from '../ui/theme';
 
 export default function Home() {
   const insets = useSafeAreaInsets();
   const [error, setError] = useState<string | null>(null);
 
+  const [recent, setRecent] = useState<SessionMeta[]>([]);
+
+  // Refresh "Continue editing" whenever the home screen comes back into view.
+  useFocusEffect(
+    useCallback(() => {
+      sessions
+        .list()
+        .then(setRecent)
+        .catch(() => setRecent([]));
+    }, []),
+  );
+
+  const removeSession = (meta: SessionMeta) => {
+    Alert.alert('Remove this edit?', 'The edited version and its history will be deleted from this phone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          sessions.remove(meta.id);
+          setRecent((list) => list.filter((m) => m.id !== meta.id));
+        },
+      },
+    ]);
+  };
+
   useEffect(() => {
-    void fetchDevScript().then((script) => {
+    void fetchDevScript().then(async (script) => {
       if (!script) return;
       const params: Record<string, string> = { command: (script.commands ?? []).join('\n') };
+      if (script.resume) {
+        const [latest] = await sessions.list();
+        if (latest) params.session = latest.id;
+      }
       if (script.capture) params.capture = script.capture;
       if (script.save) params.save = '1';
-      if (script.uri) params.uri = script.uri;
+      if (params.session) {
+        // resuming: no photo source needed
+      } else if (script.uri) params.uri = script.uri;
       else params.sample = script.sample ?? 'portrait';
       router.push({ pathname: '/editor', params });
     });
@@ -49,6 +84,27 @@ export default function Home() {
       </View>
 
       <View style={styles.actions}>
+        {recent.length ? (
+          <View style={styles.recent}>
+            <Text style={styles.recentTitle}>Continue editing</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentRow}>
+              {recent.map((meta) => (
+                <Pressable
+                  key={meta.id}
+                  style={({ pressed }) => [styles.recentItem, pressed && styles.pressed]}
+                  onPress={() => router.push({ pathname: '/editor', params: { session: meta.id } })}
+                  onLongPress={() => removeSession(meta)}
+                  accessibilityLabel={`Continue editing, ${meta.stepCount} edits, ${timeAgo(meta.updatedAt)}. Long press to remove.`}
+                >
+                  <Image source={{ uri: sessions.thumbUri(meta.id) }} style={styles.recentThumb} />
+                  <Text style={styles.recentMeta} numberOfLines={1}>
+                    {meta.stepCount ? `${meta.stepCount} edit${meta.stepCount > 1 ? 's' : ''}` : 'Original'} · {timeAgo(meta.updatedAt)}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
         <Pressable style={({ pressed }) => [styles.primary, pressed && styles.pressed]} onPress={pick}>
           <Ionicons name="images-outline" size={20} color={colors.accentInk} />
           <Text style={styles.primaryText}>Choose a photo</Text>
@@ -96,6 +152,12 @@ const styles = StyleSheet.create({
   tagline: { fontFamily: serif, fontSize: 22, color: colors.accent },
   body: { color: colors.textMuted, fontSize: 16, lineHeight: 23, marginTop: 6 },
   actions: { gap: 12 },
+  recent: { gap: 10, marginBottom: 8 },
+  recentTitle: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  recentRow: { gap: 12 },
+  recentItem: { width: 112, gap: 6 },
+  recentThumb: { width: 112, height: 112, borderRadius: radius.sm, backgroundColor: colors.surface },
+  recentMeta: { color: colors.textMuted, fontSize: 12 },
   primary: {
     flexDirection: 'row',
     gap: 10,

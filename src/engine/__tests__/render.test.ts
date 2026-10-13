@@ -163,8 +163,11 @@ describe('renderPhoto', () => {
 
   it('renders the selection overlay', () => {
     const masks = new MaskStore({ base: source, meanLuma: 0.5, cpu: true });
-    const overlay = readRGBA(renderSelectionOverlay(masks.get('left')!, W, H, true));
+    const overlay = readRGBA(renderSelectionOverlay(masks.get('left')!, W, H, true, [1, 0.8, 0.1]));
     expect(overlay[3]).toBeGreaterThan(overlay[(W - 1) * 4 + 3]);
+    // tinted with the given colour (unpremultiplied red ≈ 255, blue ≈ 26)
+    expect(overlay[0]).toBeGreaterThan(240);
+    expect(overlay[2]).toBeLessThan(40);
   });
 });
 

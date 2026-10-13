@@ -42,18 +42,21 @@ export class PhotoSession {
     this.masks = new MaskStore({ base: this.base, meanLuma: this.stats.brightness });
   }
 
-  /** Run the person segmenter and face detector, then rebuild masks. */
+  /**
+   * Run the person segmenter and face detector, then rebuild masks. Each model
+   * is independent: if one fails, the other's regions are still offered.
+   */
   async analyze(): Promise<void> {
-    try {
-      const [segmentation, faces] = await Promise.all([segmentPeople(this.base), detectFaces(this.base)]);
-      this.segmentation = segmentation;
-      this.faces = faces;
-      this.stats = measurePhoto(this.base, segmentation);
-      this.analysis = 'ready';
-    } catch (error) {
-      if (__DEV__) console.warn('[analysis] on-device models failed', error);
-      this.analysis = 'limited';
+    const [segmentation, faces] = await Promise.allSettled([segmentPeople(this.base), detectFaces(this.base)]);
+    if (segmentation.status === 'fulfilled') {
+      this.segmentation = segmentation.value;
+      this.stats = measurePhoto(this.base, segmentation.value);
+    } else if (__DEV__) {
+      console.warn('[analysis] person segmenter failed', segmentation.reason);
     }
+    if (faces.status === 'fulfilled') this.faces = faces.value;
+    else if (__DEV__) console.warn('[analysis] face detector failed', faces.reason);
+    this.analysis = segmentation.status === 'fulfilled' && faces.status === 'fulfilled' ? 'ready' : 'limited';
     this.masks.dispose();
     this.masks = new MaskStore({
       base: this.base,

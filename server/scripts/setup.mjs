@@ -137,6 +137,10 @@ async function smokeTest(url, appKey) {
         if (cost !== null) console.log(`At paid-tier prices that is about $${cost.toFixed(2)} per 1,000 requests.`);
         return;
       }
+      if (payload.error === 'upstream_auth') {
+        console.log(`${chosen.name} rejected the API key. Run setup again and paste a valid key.`);
+        return;
+      }
       if (![401, 500].includes(res.status)) {
         console.log(`The worker answered ${res.status} ${JSON.stringify(payload)}. Check the key and run setup again.`);
         return;

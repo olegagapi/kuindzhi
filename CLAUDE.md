@@ -26,7 +26,7 @@ cd server && npm run setup -- --dry-run                       # one-command depl
   `adb shell am start -a android.intent.action.VIEW -d "kuindzhi://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"`
   (no confirmation prompt on Android); captures land in `run-as app.kuindzhi cat cache/<name>.jpg`.
 - Verifying UI changes without tapping: the dev-script hook (`src/dev/devScript.ts`, README "Scripted runs") opens the
-  editor, runs commands, and can `capture` the full-res render to the app cache for pixel inspection. Launch with
+  editor, runs commands, and can `capture` the full-res render to the app cache for pixel inspection, `save` it to Photos, or `resume` the latest saved session. Launch with
   `xcrun simctl launch booted app.kuindzhi --initialUrl http://localhost:8081` (`simctl openurl` triggers a
   confirmation alert that can't be dismissed from the CLI).
 - Apple Foundation Models in the simulator may report "available" yet fail with `GenerationError -1` when the host
@@ -66,7 +66,22 @@ delegate). Inputs are **letterboxed** and scaled to **[-1, 1]**; the segmenter o
 verified against the real models — don't "fix" them to [0, 1] or stretching. Decoders are pure TS; the BlazeFace
 decoder is tested against a real model output in `src/ml/__fixtures__`.
 
-**State**: `src/state/editStack.ts` is a pure reducer (apply/update/remove/undo/redo/reset). Slider drags dispatch
+**Colours**: `src/ui/palette.json` is the single source. `src/ui/palette.ts` types it, `src/ui/theme.ts` exposes it as
+`colors`, `app.config.ts` reads it for native colours (there is no `app.json`; native colours need `npx expo prebuild`),
+and the render engine passes the accent to the selection-overlay shader as a uniform. Never write colour literals in
+components or shaders; the only literals left are mask values (black/white) in the engine.
+
+**Failure handling**: LLM tiers are module-level singletons (`src/nlp/tiers.ts`) wrapped by `withCircuitBreaker`
+(`src/nlp/resilience.ts`); `Planner.issue()` reports why a tier was skipped and the cascade appends a short note to the
+reply. `expo-speech-recognition` and `react-native-fast-tflite` are `require`d lazily so a missing native module only
+disables its feature; keep new native imports lazy where a feature is optional.
+
+**Sessions (autosave)**: `src/state/sessionStore.ts` is pure (behind a `Storage` interface, tested with
+`createMemoryStorage`); `src/state/sessions.ts` binds it to expo-file-system under `Documents/sessions/<id>/`;
+`useAutosave` creates a session on the first edit and saves debounced, plus on background/unmount. The editor accepts
+`session=<id>` to resume.
+
+**State**: `src/state/editStack.ts` is a pure reducer (apply/update/remove/undo/redo/reset/restore). Slider drags dispatch
 `update` with `commit: false` and commit once on release, so history isn't flooded.
 
 ## Testing notes

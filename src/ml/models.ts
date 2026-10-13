@@ -2,7 +2,7 @@
 // same .tflite on iOS and Android). Pre-processing uses Skia: letterbox the photo
 // onto a small raster surface and read the pixels back.
 import { Skia, type SkImage } from '@shopify/react-native-skia';
-import { loadTensorflowModel, type TfliteModel } from 'react-native-fast-tflite';
+import type { TfliteModel } from 'react-native-fast-tflite';
 
 import { disposeAll, makeSurface, readRGBA } from '../engine/gpu';
 import { decodeFaces, type Face } from './blazeface';
@@ -12,16 +12,45 @@ import { decodeSegmentation, type Segmentation } from './segmentationMath';
 let segmenter: Promise<TfliteModel> | null = null;
 let faceDetector: Promise<TfliteModel> | null = null;
 
+/**
+ * Loads a bundled model. The TFLite native module is required lazily so a build
+ * without it (or a failed load) only turns off person/face regions instead of
+ * crashing the editor. A failed load is forgotten, so the next photo retries.
+ */
+function loadModel(asset: number, cache: () => Promise<TfliteModel> | null, set: (p: Promise<TfliteModel> | null) => void) {
+  const cached = cache();
+  if (cached) return cached;
+  let promise: Promise<TfliteModel>;
+  try {
+    const { loadTensorflowModel } = require('react-native-fast-tflite') as typeof import('react-native-fast-tflite');
+    // CPU first: every op in these models runs on the default delegate; CoreML /
+    // GPU delegates can be enabled per platform later.
+    promise = loadTensorflowModel(asset, []);
+  } catch (error) {
+    promise = Promise.reject(error);
+  }
+  promise = promise.catch((error) => {
+    set(null);
+    throw error;
+  });
+  set(promise);
+  return promise;
+}
+
 function getSegmenter() {
-  // CPU first: every op in these models runs on the default delegate; CoreML /
-  // GPU delegates can be enabled per platform later.
-  segmenter ??= loadTensorflowModel(require('../../assets/models/selfie_multiclass_256x256.tflite'), []);
-  return segmenter;
+  return loadModel(
+    require('../../assets/models/selfie_multiclass_256x256.tflite'),
+    () => segmenter,
+    (p) => (segmenter = p),
+  );
 }
 
 function getFaceDetector() {
-  faceDetector ??= loadTensorflowModel(require('../../assets/models/blaze_face_short_range.tflite'), []);
-  return faceDetector;
+  return loadModel(
+    require('../../assets/models/blaze_face_short_range.tflite'),
+    () => faceDetector,
+    (p) => (faceDetector = p),
+  );
 }
 
 /** Letterbox `image` into a size x size square and return the [-1, 1] RGB tensor. */

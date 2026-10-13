@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { SkImage } from '@shopify/react-native-skia';
 import { Asset } from 'expo-asset';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,13 +11,14 @@ import type { PlanSource } from '../edits/schema';
 import { autoEnhance } from '../engine/analyze';
 import { writeDevCapture } from '../dev/devScript';
 import { disposeAll } from '../engine/gpu';
-import { loadPhoto, saveToLibrary, shareImage } from '../engine/photo';
+import { decodeFile, loadPhoto, saveToLibrary, shareImage } from '../engine/photo';
 import { PhotoSession, type AnalysisState } from '../engine/session';
-import { createCloudPlanner } from '../nlp/cloudPlanner';
-import { onDevicePlanner } from '../nlp/onDevicePlanner';
 import { planCommand } from '../nlp/planner';
+import { llmTiers } from '../nlp/tiers';
 import { useVoiceCommand } from '../speech/useVoiceCommand';
 import { editStackReducer, initialEditStack } from '../state/editStack';
+import { sessions } from '../state/sessions';
+import { useAutosave, type SessionSource } from '../state/useAutosave';
 import { CommandBar } from '../ui/CommandBar';
 import { SOURCE_LABEL } from '../ui/format';
 import { PhotoView } from '../ui/PhotoView';
@@ -30,9 +31,6 @@ const SAMPLES: Record<string, number> = {
   sunset: require('../../assets/samples/sunset.jpg'),
 };
 
-// Per-launch id so the planner Worker can rate-limit per client.
-const DEVICE_ID = `d-${Math.random().toString(36).slice(2, 12)}`;
-
 async function resolveSource(params: { uri?: string; sample?: string }): Promise<string> {
   if (params.uri) return params.uri;
   const module = SAMPLES[params.sample ?? 'portrait'] ?? SAMPLES.portrait;
@@ -43,7 +41,14 @@ async function resolveSource(params: { uri?: string; sample?: string }): Promise
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export default function Editor() {
-  const params = useLocalSearchParams<{ uri?: string; sample?: string; command?: string; capture?: string; save?: string }>();
+  const params = useLocalSearchParams<{
+    uri?: string;
+    sample?: string;
+    session?: string;
+    command?: string;
+    capture?: string;
+    save?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const [session, setSession] = useState<PhotoSession | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisState>('pending');
@@ -59,18 +64,34 @@ export default function Editor() {
   const [exporting, setExporting] = useState(false);
   const [reply, setReply] = useState<{ text: string; source?: PlanSource } | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const tiers = useMemo(() => [onDevicePlanner, createCloudPlanner({ deviceId: DEVICE_ID })], []);
+  const [source, setSource] = useState<SessionSource | null>(null);
+  useAutosave(state, source);
 
-  // Open the photo, then analyse it (people + faces) in the background.
+  // Open the photo (or a saved session), then analyse it (people + faces) in the background.
   useEffect(() => {
     let cancelled = false;
     let opened: PhotoSession | null = null;
     (async () => {
       try {
-        const image = await loadPhoto(await resolveSource(params));
+        let image: SkImage;
+        let src: SessionSource;
+        if (params.session) {
+          const record = await sessions.load(params.session);
+          if (!record) throw new Error('this edit is no longer on this phone.');
+          const fileUri = sessions.originalUri(record.id);
+          image = await decodeFile(fileUri);
+          src = { fileUri, origin: record.origin, existing: record };
+          if (cancelled) return;
+          dispatch({ type: 'restore', stack: record.stack });
+        } else {
+          const loaded = await loadPhoto(await resolveSource(params));
+          image = loaded.image;
+          src = { fileUri: loaded.fileUri, origin: params.uri ? 'library' : `sample:${params.sample ?? 'portrait'}` };
+        }
         if (cancelled) return;
         opened = new PhotoSession(image);
         setSession(opened);
+        setSource(src);
         setOriginal(opened.renderPreview([]));
         await opened.analyze();
         if (!cancelled) setAnalysis(opened.analysis);
@@ -83,7 +104,7 @@ export default function Editor() {
       opened?.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.uri, params.sample]);
+  }, [params.uri, params.sample, params.session]);
 
   // Re-render the preview whenever the stack (or the masks) change; coalesced per frame.
   useEffect(() => {
@@ -119,7 +140,7 @@ export default function Editor() {
       setBusy(true);
       setReply(null);
       try {
-        const { plan, source } = await planCommand(command, session.context(stateRef.current.steps), tiers);
+        const { plan, source } = await planCommand(command, session.context(stateRef.current.steps), llmTiers);
         switch (plan.intent) {
           case 'edit': {
             if (plan.steps.length) {
@@ -158,17 +179,17 @@ export default function Editor() {
         setBusy(false);
       }
     },
-    [session, tiers, flashArea],
+    [session, flashArea],
   );
 
   // Deep-link / dev-script automation: kuindzhi://editor?sample=portrait&command=make%20my%20face%20brighter
   // (several commands separated by newlines run in order).
   const autoRan = useRef(false);
   useEffect(() => {
-    if (params.command && analysis !== 'pending' && session && !autoRan.current) {
+    if ((params.command || params.capture) && analysis !== 'pending' && session && !autoRan.current) {
       autoRan.current = true;
       void (async () => {
-        for (const command of params.command!.split('\n').filter(Boolean)) await runCommand(command);
+        for (const command of (params.command ?? '').split('\n').filter(Boolean)) await runCommand(command);
         if (__DEV__ && params.capture && session) {
           // Let the reducer settle, then write the full-res result for inspection.
           await new Promise((r) => setTimeout(r, 300));
@@ -271,6 +292,7 @@ export default function Editor() {
           transcript={voice.transcript}
           suggestions={suggestions}
           onSubmit={runCommand}
+          micAvailable={voice.available}
           onMicStart={voice.start}
           onMicStop={voice.stop}
         />

@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     alignSelf: 'center',
-    backgroundColor: 'rgba(14,13,11,0.75)',
+    backgroundColor: colors.scrim,
     borderRadius: radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 5,

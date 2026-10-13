@@ -29,7 +29,9 @@ export type EditAction =
   | { type: 'select'; id: string | null }
   | { type: 'undo' }
   | { type: 'redo' }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  /** Restore a saved session (no history entry of its own). */
+  | { type: 'restore'; stack: Pick<EditStackState, 'steps' | 'past' | 'future'> };
 
 export const initialEditStack: EditStackState = { steps: [], past: [], future: [], selectedId: null };
 
@@ -88,5 +90,7 @@ export function editStackReducer(state: EditStackState, action: EditAction): Edi
     }
     case 'reset':
       return state.steps.length ? commit(state, [], null) : state;
+    case 'restore':
+      return { ...action.stack, selectedId: null };
   }
 }

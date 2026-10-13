@@ -1,6 +1,7 @@
 import {
   AnthropicError,
   APIConnectionTimeoutError,
+  AuthenticationError,
   InternalServerError,
   RateLimitError,
 } from '@anthropic-ai/sdk';
@@ -168,6 +169,7 @@ describe('planner worker (PROVIDER=anthropic)', () => {
     const cases: Array<[Error, number, string]> = [
       [new RateLimitError(429, {}, 'slow down', new Headers()), 429, 'upstream_rate_limited'],
       [new APIConnectionTimeoutError(), 504, 'upstream_timeout'],
+      [new AuthenticationError(401, {}, 'invalid x-api-key', new Headers()), 502, 'upstream_auth'],
       [new InternalServerError(500, {}, 'boom', new Headers()), 502, 'upstream_error'],
     ];
     vi.spyOn(console, 'error').mockImplementation(() => {});

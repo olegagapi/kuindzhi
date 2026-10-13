@@ -12,6 +12,8 @@ export interface DevScript {
   capture?: string;
   /** Also run the real "Save to Photos" export. */
   save?: boolean;
+  /** Open the most recent saved session instead of a sample or uri. */
+  resume?: boolean;
   uri?: string;
   commands?: string[];
 }
