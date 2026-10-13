@@ -69,6 +69,29 @@ vocabulary can't drift from what the engine can render; a test checks the Swift/
 Amounts are normalized (−1…1 or 0…1) and mapped to physical parameters in the shader (e.g. exposure ±1 = ±2 EV),
 so "a bit" / "a lot" mean the same thing to every planner.
 
+### Who edits the pixels: only our code
+
+Models give the engine *input*. They never produce pixels, and nothing they return can redraw the photo.
+
+- **Language models** (on-device or cloud) turn a sentence into an `EditPlan`:
+  - **Never see the photo.** They get the sentence, the regions this photo has, a few rounded statistics and the
+    history. A cloud call is about 1.5k tokens in and 100 out, with no image tokens.
+  - **Locked to the catalog.** Every tier is held to the catalog's names. Apple Foundation Models use guided
+    generation over the catalog's names. Gemini Nano's answer is parsed, and steps with unknown names are dropped. The
+    cloud uses a JSON schema (Gemini) or structured outputs (Claude). Every plan then goes through `normalizePlan`,
+    which clamps amounts and drops steps on regions the photo lacks.
+  - **"Redraw" can't be expressed.** The prompt's "never redraw" line exists only so the model recognises requests
+    like "remove the person" and answers `unsupported`. The schema, not the prompt, is what protects the photo.
+- **Vision models** (MediaPipe segmentation and BlazeFace, on the phone) only say *where* things are: per-pixel
+  probabilities that become masks, like Photoshop's "Select Subject".
+- **The engine does all the editing.** `src/engine/shaders.ts` holds every algorithm, and each output pixel is our
+  formula applied to the original pixel, blended by the mask. Auto-enhance is histogram maths, not a model. With
+  every model removed, the editor still works through the rule parser and the sliders.
+
+**One nuance:** mask edges come from a neural network, so *where* an edit fades out depends on its judgement (a strand
+of hair can be misjudged). A mask can only change how strongly our adjustment applies to a pixel; it can never add
+content.
+
 ### Engine details worth knowing
 
 - **Non-destructive.** `renderPhoto(source, steps, masks, size)` always starts from the original; the preview and
@@ -141,8 +164,9 @@ Kandinsky, the working name, also has a Ukrainian link: he grew up in Odesa.
 
 Built and verified:
 - Engine, masks and ML decoding: compiled and pixel-tested in real Skia (CanvasKit) under Jest; BlazeFace decoding
-  matches the reference on real model output.
-- Local parser, cascade policy, cloud worker (handler tests with the Claude client mocked, bundle dry-run).
+  matches the reference on real model output. What each suite covers, and the planned functional suite, are in
+  [`TESTING.md`](TESTING.md).
+- Local parser, cascade policy, cloud worker (handler tests with the Gemini and Claude clients mocked, bundle dry-run).
 - iOS simulator, end to end, on the bundled samples (scripted with the dev script, see below):
   - "make my face brighter" raised the face region by ~17 levels (within ~2 levels of an exact +0.6 EV linear gain)
     while the background moved < 1 level;
@@ -165,7 +189,7 @@ Built and verified:
 Not yet verified:
 - Foundation Models / Gemini Nano generation quality on real hardware (needs an Apple Intelligence iPhone or a
   Gemini Nano-capable Android phone).
-- The cloud worker against the live API (needs your Anthropic key; deploy steps in `server/README.md`).
+- The cloud worker against the live API (needs a free Gemini key: `cd server && npm run setup`, see `AI-PROVIDERS.md`).
 - Voice input (needs a microphone; the simulator can't be scripted to speak) and performance on low-end Android.
 
 Next steps, in order of value:
@@ -175,4 +199,4 @@ Next steps, in order of value:
 4. **More selectors**: a general subject/object segmenter (iOS `VNGenerateForegroundInstanceMaskRequest`,
    ML Kit Subject Segmentation on Android) and face-mesh landmarks for lips/teeth/brows.
 5. Tone-curve and HSL-per-band adjustments; RAW/HEIF export; Display-P3 output.
-6. App Attest / Play Integrity on the worker; persistence of edit stacks; EAS Update channel for the grammar.
+6. App Attest / Play Integrity on the worker; EAS Update channel for the grammar.

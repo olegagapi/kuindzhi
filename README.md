@@ -9,7 +9,9 @@ leaves the phone. Edits are saved automatically ("Continue editing" on the home 
 optional cloud planner works offline.
 
 iOS + Android, React Native + Expo (SDK 57), Skia for the GPU pipeline, TFLite for on-device vision.
-Design rationale, AI cost plan and roadmap: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Design docs live in [`docs/`](docs/README.md): architecture, cost plan and roadmap ([`ARCHITECTURE.md`](docs/ARCHITECTURE.md)),
+visual and interaction design ([`DESIGN.md`](docs/DESIGN.md)), testing strategy ([`TESTING.md`](docs/TESTING.md)) and
+the cloud model choice ([`AI-PROVIDERS.md`](docs/AI-PROVIDERS.md)).
 Visual walkthrough of the edit pipeline, with the real output of every stage: [`docs/pipeline.html`](docs/pipeline.html) (open in a browser).
 
 ## Run it

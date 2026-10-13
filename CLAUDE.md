@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Kuindzhi is a voice/text-driven photo editor (Expo SDK 57, React Native 0.86, TypeScript). Commands are turned into
 deterministic adjustments with masks — never generative redrawing — and the photo never leaves the device.
-Product/architecture rationale: `docs/ARCHITECTURE.md`. Generic Expo rules (Expo Router in `src/app/`, `npx expo install`
+Design docs live in `docs/` (index: `docs/README.md`): architecture and rationale, visual/interaction design,
+testing strategy, cloud provider choice. Put new design docs there, and update the relevant one in the same change
+when a decision it records changes. Generic Expo rules (Expo Router in `src/app/`, `npx expo install`
 for deps, never hand-edit `ios/`/`android/`): `AGENTS.md`.
 
 ## Commands
