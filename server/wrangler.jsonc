@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kuindzhi-planner",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // The shared plan schema lives in ../src/edits and imports "zod"; point it at
+  // this package's copy so the bundle carries a single zod.
+  "alias": {
+    "zod": "./node_modules/zod"
+  },
+  "vars": {
+    // "gemini" (Gemini 3.5 Flash-Lite, free tier) or "anthropic" (Claude Haiku 4.5).
+    // `npm run setup -- --provider=...` sets this at deploy time.
+    "PROVIDER": "gemini"
+    // Optional: "MODEL": "gemini-3.1-flash-lite" to override the provider's default model.
+  },
+  // 30 plan requests per device per minute.
+  "ratelimits": [
+    {
+      "name": "PLAN_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 30, "period": 60 }
+    }
+  ],
+  "observability": { "enabled": true }
+  // Secrets (wrangler secret put): APP_KEY, plus GEMINI_API_KEY or ANTHROPIC_API_KEY
+}

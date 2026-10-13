@@ -1,0 +1,13 @@
+{
+  "bg": "#0B0B0A",
+  "surface": "#161614",
+  "surfaceHigh": "#22211E",
+  "border": "#2F2D28",
+  "text": "#F5F2EA",
+  "textMuted": "#9E998D",
+  "accent": "#FFCC1A",
+  "accentInk": "#1A1400",
+  "moon": "#D6E4DA",
+  "danger": "#FF6A55",
+  "scrim": "rgba(11, 11, 10, 0.72)"
+}
