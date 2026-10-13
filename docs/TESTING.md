@@ -33,10 +33,11 @@ exact maths or every adjustment. That's the next section.
 
 Build these in order; the first two are cheap and catch most real bugs.
 
-1. **Properties that hold for every adjustment**, checked on random small images (e.g. with `fast-check`):
+1. **Properties to check for every adjustment**, on random small images (e.g. with `fast-check`):
    - amount 0 changes nothing;
    - output stays within 0–1 and is never NaN;
-   - where the mask is 0, pixels are bit-identical to the input, and a half mask gives exactly half the blend;
+   - where the mask is 0, pixels are bit-identical to the input, and a half mask gives half the blend (within 8-bit
+     rounding);
    - tone adjustments keep tones in order (a darker pixel never ends up brighter than a lighter one).
 2. **Physics checks against the formulas** in `ADJUST_SKSL`:
    - exposure +0.5 (= +1 stop) doubles linear light below the highlight shoulder;
@@ -60,6 +61,11 @@ Build these in order; the first two are cheap and catch most real bugs.
 6. **Golden images:** fixed edit stacks on the bundled samples, compared with stored reference renders. This is the
    safety net for tuning: a change to "contrast" can't silently alter every look that uses it. Add these once the
    looks are tuned.
+
+**Already found by working through item 1:** `highlights` breaks tone order below about −0.8. On a grey ramp at −1,
+the output peaks at 144 for input 168 and then falls to 135 at input 230, so the brightest areas end up darker than
+slightly less bright ones (checked by rendering the real shader in Jest). The default amount (−0.35) and −0.5 are
+fine. The fix is a roll-off that can't turn over; it's a shader change, so it waits for a go-ahead.
 
 **Tolerances.** Jest runs Skia on the CPU at full float precision, while phone GPUs sometimes compute at half
 precision. Results can differ by a level or two out of 255, so pixel comparisons, especially golden images, use a

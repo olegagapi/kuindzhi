@@ -103,7 +103,8 @@ palette.
 
 ## Open items
 
-- **App icon and splash** are still the Expo template's (`assets/icon.png`, `assets/android-icon-*.png`).
-  Kuindzhi needs its own; the moon and the accent are the obvious material.
+- **App icon** is still the Expo template's (`assets/icon.png`, `assets/android-icon-*.png`), and no splash screen is
+  configured (`assets/splash-icon.png` is an unused template file). Kuindzhi needs its own; the moon and the accent
+  are the obvious material.
 - **Hold gestures have no tap alternative** (compare, talk, show area). This is worth adding for accessibility.
 - **Ukrainian UI and commands** are on the roadmap (`ARCHITECTURE.md`).
