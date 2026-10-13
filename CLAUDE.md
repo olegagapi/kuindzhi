@@ -9,6 +9,25 @@ testing strategy, cloud provider choice. Put new design docs there, and update t
 when a decision it records changes. Generic Expo rules (Expo Router in `src/app/`, `npx expo install`
 for deps, never hand-edit `ios/`/`android/`): `AGENTS.md`.
 
+## Working in this repo
+
+The project is built with AI agents, and the agent setup is part of the repo, not anyone's user-level config:
+- **Skills** in `.claude/skills/`:
+  - `device-check` runs scripted commands on the simulator/emulator, pulls the full-res render and measures it
+    against baselines;
+  - `engine-change` covers catalog/shader changes, with a curve probe that renders any adjustment through the real
+    shader.
+- **Plugins** in `.claude/settings.json`: the Expo plugin, for dev-client and store builds, EAS Update, native
+  modules and SDK upgrades.
+- **Rules:** this file, `AGENTS.md`, and the design docs in `docs/`.
+
+New skills, agents, hooks or plugin settings for this project go under `.claude/` and get committed. `.gitignore`
+un-ignores `.claude/skills/` and `.claude/settings.json`; add a line there for any other shared path. Personal settings
+(`.claude/settings.local.json`) stay local.
+
+**Git:** do each piece of work on its own branch, merge it into `main` (`git merge --no-ff`), push, and delete the
+branch. No pull requests.
+
 ## Commands
 
 ```bash
@@ -27,10 +46,6 @@ cd server && npm run setup -- --dry-run                       # one-command depl
 - Android dev-script runs: `adb reverse tcp:8081 tcp:8081 && adb reverse tcp:8099 tcp:8099`, then
   `adb shell am start -a android.intent.action.VIEW -d "kuindzhi://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"`
   (no confirmation prompt on Android); captures land in `run-as app.kuindzhi cat cache/<name>.jpg`.
-- Project skills (`.claude/skills/`): `device-check` runs scripted commands on the simulator/emulator, pulls the
-  full-res render and measures it against baselines; `engine-change` covers catalog/shader changes, with a curve probe
-  that renders any adjustment through the real shader. The Expo plugin (enabled in `.claude/settings.json`) covers
-  dev-client/store builds, EAS Update, native modules and SDK upgrades.
 - Verifying UI changes without tapping: the dev-script hook (`src/dev/devScript.ts`, README "Scripted runs") opens the
   editor, runs commands, and can `capture` the full-res render to the app cache for pixel inspection, `save` it to Photos, or `resume` the latest saved session. Launch with
   `xcrun simctl launch booted app.kuindzhi --initialUrl http://localhost:8081` (`simctl openurl` triggers a
