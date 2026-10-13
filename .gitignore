@@ -47,3 +47,10 @@ yarn-error.*
 modules/*/android/build/
 modules/*/android/.gradle/
 modules/*/android/.cxx/
+
+# Claude Code: share the project skills and plugin list (overrides a global ignore of .claude);
+# everything else under .claude, e.g. settings.local.json, stays local.
+!.claude/
+.claude/*
+!.claude/skills/
+!.claude/settings.json
